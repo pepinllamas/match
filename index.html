@@ -21,6 +21,7 @@
   --cai:#FF8A2B;
   --gators:#4FA8E8;
   --flag:#E2464A;
+  --other:#B98BE0;
   --accent:var(--cai);
   --r:14px;
   --pad:10px;
@@ -150,6 +151,27 @@ textarea{min-height:74px;resize:none}
   background:var(--chalk);color:var(--pitch);padding:11px 18px;border-radius:999px;font-size:13px;font-weight:700;
   opacity:0;pointer-events:none;transition:.22s;z-index:9}
 .toast.on{opacity:1;transform:translate(-50%,0)}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chips button{flex:0 0 auto;border:1px solid var(--line);border-radius:999px;padding:8px 15px;
+  font-size:12.5px;font-weight:700;color:var(--mute);white-space:nowrap}
+.chips button.on{background:var(--chalk);color:var(--pitch);border-color:var(--chalk)}
+.namechips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.namechips button{border:1px dashed var(--line);border-radius:999px;padding:6px 12px;font-size:12px;color:var(--mute)}
+.blk{margin-top:18px}
+.blk>.eyebrow{display:block;padding:0 2px 7px}
+.blk .card{margin-top:0}
+.totrow .cov{display:block;font-size:10px;font-weight:600;color:var(--mute);font-family:var(--body)}
+.totrow.dim b{color:var(--mute);opacity:.6}
+.form{display:flex;gap:4px;flex-wrap:wrap;margin-top:2px}
+.form span{width:23px;height:23px;border-radius:7px;display:grid;place-items:center;
+  font-family:var(--disp);font-size:11px;font-weight:800;color:#10130E}
+.form .W{background:#5BD08A}.form .D{background:#E8C34A}.form .L{background:var(--flag);color:#fff}
+.chart{width:100%;height:118px;display:block;margin-top:4px}
+.chart .bg{fill:var(--turf)}
+.lgd{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;font-size:11px;color:var(--mute)}
+.lgd i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px;vertical-align:middle}
+#imp{min-height:150px;font-family:var(--mono);font-size:11px}
 .warn{background:#3A2410;border:1px solid #7A4A16;color:#F0C48A;border-radius:11px;padding:11px;font-size:12.5px;margin-top:12px;line-height:1.5}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -165,13 +187,9 @@ textarea{min-height:74px;resize:none}
   <div class="scroll">
     <button class="cta" id="newGame">New game</button>
     <div id="resumeWrap"></div>
+    <button class="cta sub" id="openDash" style="margin-top:10px">Season dashboard</button>
 
-    <div class="card" id="totalsCard">
-      <div class="teamtabs" id="teamTabs"></div>
-      <div id="totals"></div>
-    </div>
-
-    <div class="eyebrow" style="margin:20px 0 4px">Games logged</div>
+    <div class="eyebrow" style="margin:24px 0 4px">Games logged</div>
     <div id="gameList"></div>
   </div>
 </section>
@@ -182,6 +200,9 @@ textarea{min-height:74px;resize:none}
   <div class="scroll">
     <label class="f"><span class="eyebrow">Team he's playing for</span>
       <div class="seg team" id="segTeam"></div></label>
+    <label class="f" id="teamOtherWrap" style="display:none"><span class="eyebrow">Team name</span>
+      <input type="text" id="fTeam" placeholder="Type the club or school name" autocapitalize="words">
+      <div class="namechips" id="pastTeams"></div></label>
     <label class="f"><span class="eyebrow">Opponent</span>
       <input type="text" id="fOpp" placeholder="Who are they playing?" autocapitalize="words"></label>
     <label class="f"><span class="eyebrow">Date</span><input type="date" id="fDate"></label>
@@ -190,9 +211,10 @@ textarea{min-height:74px;resize:none}
     <label class="f"><span class="eyebrow">Competition</span>
       <input type="text" id="fComp" placeholder="League, friendly, tournament…" autocapitalize="words"></label>
     <label class="f"><span class="eyebrow">Full game length (minutes)</span>
-      <div class="seg" id="segLen"></div></label>
+      <div class="seg" id="segLen" style="flex-wrap:wrap"></div></label>
     <label class="f" id="lenCustomWrap" style="display:none">
-      <span class="eyebrow">Minutes</span><input type="number" id="fLen" min="20" max="130" inputmode="numeric"></label>
+      <span class="eyebrow">How many minutes?</span>
+      <input type="number" id="fLen" min="10" max="130" inputmode="numeric" placeholder="e.g. 45"></label>
     <label class="f"><span class="eyebrow">Starting or on the bench?</span>
       <div class="seg" id="segStart"></div></label>
   </div>
@@ -293,6 +315,29 @@ textarea{min-height:74px;resize:none}
   </div>
 </section>
 
+<!-- ================= DASHBOARD ================= -->
+<section id="dash" class="screen">
+  <div class="bar"><button class="ghost" data-back="home">Done</button><div class="sp"></div>
+    <h1>Dashboard</h1><div class="sp"></div>
+    <button class="ghost" id="openImport">Import</button></div>
+  <div class="scroll">
+    <div class="chips" id="dashChips" style="margin-bottom:4px"></div>
+    <div id="dashBody"></div>
+  </div>
+</section>
+
+<!-- ================= IMPORT ================= -->
+<section id="importScreen" class="screen">
+  <div class="bar"><button class="ghost" data-back="dash">Back</button><div class="sp"></div><h1>Import from the spreadsheet</h1></div>
+  <div class="scroll">
+    <p class="hint" style="margin-top:6px">Open the Game Log, select from cell <b>A5</b> across to the last column of your
+      final game, copy, then paste it below. Games already here are skipped, so importing twice is safe.</p>
+    <textarea id="imp" placeholder="Paste the rows here"></textarea>
+    <button class="cta" id="doImport" style="margin-top:10px">Import games</button>
+    <div class="warn" id="impMsg" style="display:none"></div>
+  </div>
+</section>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -316,7 +361,20 @@ let DB=load();
 
 /* ---------------- constants ---------------- */
 const TEAMS=["Academia CAI","St Marys Gators"];
-const LENGTHS=[60,70,80,90];
+const LENGTHS=[50,60,70,80,90];
+const shortName=t=>t==="Academia CAI"?"CAI":t==="St Marys Gators"?"Gators":t;
+function knownTeams(){
+  const set=[...TEAMS];
+  DB.games.forEach(g=>{if(g.team&&!set.includes(g.team))set.push(g.team)});
+  return set;
+}
+function customTeams(){return knownTeams().filter(t=>!TEAMS.includes(t));}
+function customLengths(){
+  return [...new Set(DB.games.map(g=>+g.len).filter(v=>v&&!LENGTHS.includes(v)))].sort((a,b)=>a-b);
+}
+const numOr=v=>(typeof v==="number"&&isFinite(v))?v:null;
+const dsh=v=>numOr(v)===null?"—":v;
+function pct(a,b){a=numOr(a);b=numOr(b);return(a===null||!b)?"—":Math.round(100*a/b)+"%";}
 const STATS=[
   {k:"goals",   l:"Goal",     t:"pos"},
   {k:"assists", l:"Assist",   t:"pos"},
@@ -350,6 +408,7 @@ function niceDate(iso){const[y,m,d]=iso.split("-");
   return ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][+m-1]+" "+(+d);}
 function todayISO(){const d=new Date();return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate());}
 function blank(){const o={};STATS.forEach(s=>o[s.k]=0);return o;}
+function blankNull(){const o={};STATS.forEach(s=>o[s.k]=null);return o;}
 
 /* ---------------- live game model ---------------- */
 let G=DB.live;
@@ -399,11 +458,26 @@ function seg(el,vals,cur,cb,fmt){
 }
 let cfg;
 function openSetup(){
-  cfg={team:TEAMS[0],opponent:"",date:todayISO(),ha:"Home",comp:"League",len:80,started:"Y"};
-  seg($("#segTeam"),TEAMS,cfg.team,v=>{cfg.team=v;});
+  cfg={team:TEAMS[0],opponent:"",date:todayISO(),ha:"Home",comp:"League",len:50,started:"Y"};
+  seg($("#segTeam"),[...TEAMS,"Other"],cfg.team,v=>{
+    if(v==="Other"){
+      $("#teamOtherWrap").style.display="block";
+      cfg.team=$("#fTeam").value.trim();
+    }else{
+      $("#teamOtherWrap").style.display="none";cfg.team=v;
+    }
+  },v=>v==="Other"?"Other":shortName(v));
+  $("#teamOtherWrap").style.display="none";$("#fTeam").value="";
+  const past=$("#pastTeams");past.innerHTML="";
+  customTeams().forEach(t=>{
+    const b=document.createElement("button");b.type="button";b.textContent=t;
+    b.onclick=()=>{$("#fTeam").value=t;cfg.team=t};past.appendChild(b);
+  });
+  $("#fTeam").oninput=()=>{cfg.team=$("#fTeam").value.trim()};
   seg($("#segHA"),["Home","Away","Neutral"],cfg.ha,v=>cfg.ha=v);
-  seg($("#segLen"),[...LENGTHS,"Other"],cfg.len,v=>{
-    if(v==="Other"){$("#lenCustomWrap").style.display="block";$("#fLen").value=cfg.len;}
+  const lens=[...new Set([...LENGTHS,...customLengths()])].sort((a,b)=>a-b);
+  seg($("#segLen"),[...lens,"Other"],cfg.len,v=>{
+    if(v==="Other"){$("#lenCustomWrap").style.display="block";$("#fLen").value="";$("#fLen").focus();}
     else{$("#lenCustomWrap").style.display="none";cfg.len=+v;}
   });
   seg($("#segStart"),["Y","N"],cfg.started,v=>cfg.started=v,v=>v==="Y"?"Starting XI":"On the bench");
@@ -416,10 +490,18 @@ $("#newGame").onclick=()=>{
   openSetup();
 };
 $("#startGame").onclick=()=>{
+  if($("#teamOtherWrap").style.display==="block"){
+    cfg.team=$("#fTeam").value.trim();
+    if(!cfg.team){toast("Give the other team a name first");$("#fTeam").focus();return}
+  }
   cfg.opponent=$("#fOpp").value.trim()||"Opponent";
   cfg.comp=$("#fComp").value.trim();
   cfg.date=$("#fDate").value||todayISO();
-  if($("#lenCustomWrap").style.display==="block") cfg.len=Math.max(20,+$("#fLen").value||80);
+  if($("#lenCustomWrap").style.display==="block"){
+    const L=+$("#fLen").value;
+    if(!L||L<10){toast("Enter how many minutes the match lasts");$("#fLen").focus();return}
+    cfg.len=Math.min(130,L);
+  }
   G=newGame({team:cfg.team,opponent:cfg.opponent,date:cfg.date,ha:cfg.ha,
              comp:cfg.comp,len:cfg.len,started:cfg.started});
   DB.live=G;save();openLive();
@@ -463,7 +545,7 @@ function paintStats(){
 }
 function openLive(){
   buildGrid();
-  $("#scUs").textContent=G.team==="Academia CAI"?"CAI":"Gators";
+  $("#scUs").textContent=shortName(G.team);
   $("#scThem").textContent=G.opponent;
   accentFor(G.team);
   paintStats();paintLive();show("live");
@@ -517,7 +599,7 @@ function endGame(){
   commitClock(G);commitOn(G);G.phase="done";keepAwake(false);save();
   $("#fMin1").value=mins(G,1);$("#fMin2").value=mins(G,2);
   $("#fNotes").value=G.notes||"";
-  $("#fsHead").textContent=(G.team==="Academia CAI"?"CAI":"Gators")+" "+G.gf+" – "+G.ga+" "+G.opponent;
+  $("#fsHead").textContent=shortName(G.team)+" "+G.gf+" – "+G.ga+" "+G.opponent;
   const s=G.stats;
   $("#fsRecap").innerHTML=[
     ["Goals",s.goals],["Assists",s.assists],["Shots (on target)",s.shots+" ("+s.sot+")"],
@@ -540,7 +622,8 @@ $("#saveGame").onclick=()=>{
 
 /* ---------------- spreadsheet row ---------------- */
 function rowFor(g,r,idx){
-  const s=g.stats, att=s.pcomp+s.pincomp;
+  const s=g.stats, e=v=>numOr(v)===null?"":v;
+  const att=(numOr(s.pcomp)===null&&numOr(s.pincomp)===null)?"":numOr(s.pcomp)+numOr(s.pincomp);
   return [
     idx, excelDate(g.date), g.team, g.opponent, g.ha, g.comp||"",
     g.gf, g.ga,
@@ -550,11 +633,11 @@ function rowFor(g,r,idx){
     '=IF(AND(L'+r+'="",M'+r+'=""),"",SUM(L'+r+':M'+r+'))',
     '=IFERROR(N'+r+'/K'+r+',"")',
     g.started,
-    s.goals, s.assists, s.shots, s.sot, s.kp, att, s.pcomp,
+    e(s.goals), e(s.assists), e(s.shots), e(s.sot), e(s.kp), att, e(s.pcomp),
     '=IFERROR(W'+r+'/V'+r+',"")',
-    s.tackles, s.intc, s.dw, s.dl,
+    e(s.tackles), e(s.intc), e(s.dw), e(s.dl),
     '=IFERROR(AA'+r+'/(AA'+r+'+AB'+r+'),"")',
-    s.fc, s.fd, s.yc, s.rc, g.rating,
+    e(s.fc), e(s.fd), e(s.yc), e(s.rc), e(g.rating),
     (g.notes||"").replace(/[\t\r\n]/g," ")
   ].join("\t");
 }
@@ -592,17 +675,17 @@ function csv(rowsTSV){
 let openIdx=null;
 function openDetail(i){
   openIdx=i;const g=sorted()[i],s=g.stats;
-  $("#dHead").textContent=(g.team==="Academia CAI"?"CAI":"Gators")+" "+g.gf+" – "+g.ga+" "+g.opponent;
+  $("#dHead").textContent=shortName(g.team)+" "+g.gf+" – "+g.ga+" "+g.opponent;
   $("#dRecap").innerHTML=[
     ["Date",niceDate(g.date)+" · "+g.ha],
     ["Minutes",(g.min1+g.min2)+" of "+g.len+" ("+g.min1+" + "+g.min2+")"],
-    ["Goals / assists",s.goals+" / "+s.assists],
-    ["Shots on target",s.sot+" of "+s.shots],
-    ["Key passes",s.kp],
-    ["Pass completion",(s.pcomp+s.pincomp)?Math.round(100*s.pcomp/(s.pcomp+s.pincomp))+"%":"—"],
-    ["Tackles / interceptions",s.tackles+" / "+s.intc],
-    ["Duels won",(s.dw+s.dl)?Math.round(100*s.dw/(s.dw+s.dl))+"%":"—"],
-    ["Rating",g.rating]
+    ["Goals / assists",dsh(s.goals)+" / "+dsh(s.assists)],
+    ["Shots on target",s.sot==null?"—":s.sot+" of "+s.shots],
+    ["Key passes",dsh(s.kp)],
+    ["Pass completion",pct(s.pcomp,numOr(s.pcomp)+numOr(s.pincomp))],
+    ["Tackles / interceptions",dsh(s.tackles)+" / "+dsh(s.intc)],
+    ["Duels won",pct(s.dw,numOr(s.dw)+numOr(s.dl))],
+    ["Rating",dsh(g.rating)]
   ].map(r=>'<div class="totrow"><span>'+r[0]+"</span><b>"+r[1]+"</b></div>").join("");
   $("#fRow").value=5+i;
   refreshRow();show("detail");
@@ -637,41 +720,239 @@ $("#fRowAll").oninput=refreshAll;
 $("#copyAll").onclick=()=>copyText(allRows(Math.max(5,+$("#fRowAll").value||5)));
 $("#dlCsvAll").onclick=()=>download("all-games.csv",csv(allRows(5)));
 
+
+/* ---------------- dashboard ---------------- */
+let dashTeam="All";
+function statAgg(list,k){
+  let sum=0,n=0,mins=0;
+  list.forEach(g=>{const v=numOr(g.stats[k]);if(v!==null){sum+=v;n++;mins+=(g.min1||0)+(g.min2||0)}});
+  return {sum,n,mins};
+}
+function row(label,value,cov,total){
+  const dim = value==="—";
+  const c = (cov!=null && total && cov<total)
+    ? '<span class="cov">'+(cov?"from "+cov+" of "+total+" games":"not tracked yet")+"</span>" : "";
+  return '<div class="totrow'+(dim?" dim":"")+'"><span>'+label+c+"</span><b>"+value+"</b></div>";
+}
+function block(title,rows){
+  return '<div class="blk"><span class="eyebrow">'+title+'</span><div class="card">'+rows.join("")+"</div></div>";
+}
+function fmt(v,d){return v==null||!isFinite(v)?"—":d?v.toFixed(d):String(v)}
+
+function renderDash(){
+  const chips=$("#dashChips");chips.innerHTML="";
+  const names=["All",...knownTeams().filter(t=>DB.games.some(g=>g.team===t))];
+  names.forEach(t=>{
+    const b=document.createElement("button");b.textContent=t==="All"?"All teams":shortName(t);
+    if(t===dashTeam)b.classList.add("on");
+    b.onclick=()=>{dashTeam=t;renderDash()};chips.appendChild(b);
+  });
+  if(!names.includes(dashTeam)){dashTeam="All";}
+  accentFor(dashTeam==="All"?"Academia CAI":dashTeam);
+
+  const L=(dashTeam==="All"?DB.games:DB.games.filter(g=>g.team===dashTeam))
+          .sort((a,b)=>a.date<b.date?-1:1);
+  const body=$("#dashBody");
+  if(!L.length){
+    body.innerHTML='<div class="empty">Nothing to summarise yet.<br>Log a game, or tap <b>Import</b> to pull in what\'s already in the spreadsheet.</div>';
+    return;
+  }
+  const N=L.length;
+  const W=L.filter(g=>g.gf>g.ga).length, D=L.filter(g=>g.gf===g.ga).length, Ls=N-W-D;
+  const GF=L.reduce((a,g)=>a+(+g.gf||0),0), GA=L.reduce((a,g)=>a+(+g.ga||0),0);
+
+  const apps=L.filter(g=>(g.min1+g.min2)>0||g.min1===0&&g.min2===0).length;
+  const starts=L.filter(g=>g.started==="Y").length;
+  const m1=L.reduce((a,g)=>a+(+g.min1||0),0), m2=L.reduce((a,g)=>a+(+g.min2||0),0);
+  const M=m1+m2;
+  const avail=L.reduce((a,g)=>a+(+g.len||0),0);
+  const full=L.filter(g=>g.len&&(g.min1+g.min2)>=g.len).length;
+  const per90=(v,mins)=>mins?v/(mins/90):null;
+
+  const g_=statAgg(L,"goals"), a_=statAgg(L,"assists"), sh=statAgg(L,"shots"),
+        st=statAgg(L,"sot"), kp=statAgg(L,"kp"), pc=statAgg(L,"pcomp"), pi=statAgg(L,"pincomp"),
+        tk=statAgg(L,"tackles"), ic=statAgg(L,"intc"), dw=statAgg(L,"dw"), dl=statAgg(L,"dl"),
+        fc=statAgg(L,"fc"), fd=statAgg(L,"fd"), yc=statAgg(L,"yc"), rc=statAgg(L,"rc");
+  const patt=pc.sum+pi.sum;
+  const rated=L.filter(g=>numOr(g.rating)!==null);
+  const ga_=g_.sum+a_.sum, gaMins=g_.mins;
+
+  const html=[];
+
+  /* form + workload visual */
+  const last=L.slice(-12);
+  html.push('<div class="blk"><span class="eyebrow">Recent form · last '+last.length+'</span><div class="card">'+
+    '<div class="form">'+last.map(g=>{const r=g.gf>g.ga?"W":g.gf===g.ga?"D":"L";
+      return '<span class="'+r+'">'+r+"</span>"}).join("")+"</div>"+
+    '<div style="margin-top:14px"><span class="eyebrow">Share of each game played</span>'+
+    barChart(L)+"</div>"+legend(L)+"</div></div>");
+
+  html.push(block("Team record",[
+    row("Games logged",N),
+    row("Wins",W),row("Draws",D),row("Losses",Ls),
+    row("Win rate",N?Math.round(100*W/N)+"%":"—"),
+    row("Goals for",GF),row("Goals against",GA),
+    row("Goal difference",(GF-GA>0?"+":"")+(GF-GA)),
+    row("Avg goals for / game",fmt(GF/N,2)),
+    row("Avg goals against / game",fmt(GA/N,2))
+  ]));
+
+  html.push(block("Playing time",[
+    row("Appearances",N),
+    row("Starts",starts),
+    row("Substitute appearances",N-starts),
+    row("1st half minutes",m1),
+    row("2nd half minutes",m2),
+    row("TOTAL minutes played",M),
+    row("Share of minutes in 1st half",M?Math.round(100*m1/M)+"%":"—"),
+    row("Share of minutes in 2nd half",M?Math.round(100*m2/M)+"%":"—"),
+    row("Minutes available",avail),
+    row("% of available minutes played",avail?Math.round(100*M/avail)+"%":"—"),
+    row("Average minutes / appearance",fmt(M/N,1)),
+    row("Full games played",full),
+    row("Full-game rate",N?Math.round(100*full/N)+"%":"—"),
+    row("90-minute equivalents",fmt(M/90,2))
+  ]));
+
+  html.push(block("Attacking output",[
+    row("Goals",g_.n?g_.sum:"—",g_.n,N),
+    row("Assists",a_.n?a_.sum:"—",a_.n,N),
+    row("Goal contributions (G+A)",g_.n||a_.n?ga_:"—",Math.max(g_.n,a_.n),N),
+    row("Shots",sh.n?sh.sum:"—",sh.n,N),
+    row("Shots on target",st.n?st.sum:"—",st.n,N),
+    row("Shot accuracy",sh.sum?Math.round(100*st.sum/sh.sum)+"%":"—",sh.n,N),
+    row("Conversion rate",sh.sum?Math.round(100*g_.sum/sh.sum)+"%":"—",sh.n,N)
+  ]));
+
+  html.push(block("Passing & creation",[
+    row("Passes attempted",pc.n?patt:"—",pc.n,N),
+    row("Passes completed",pc.n?pc.sum:"—",pc.n,N),
+    row("Pass completion %",patt?Math.round(100*pc.sum/patt)+"%":"—",pc.n,N),
+    row("Key passes",kp.n?kp.sum:"—",kp.n,N)
+  ]));
+
+  html.push(block("Defensive work",[
+    row("Tackles won",tk.n?tk.sum:"—",tk.n,N),
+    row("Interceptions",ic.n?ic.sum:"—",ic.n,N),
+    row("Duels won",dw.n?dw.sum:"—",dw.n,N),
+    row("Duels lost",dl.n?dl.sum:"—",dl.n,N),
+    row("Duel win %",(dw.sum+dl.sum)?Math.round(100*dw.sum/(dw.sum+dl.sum))+"%":"—",dw.n,N)
+  ]));
+
+  html.push(block("Discipline",[
+    row("Fouls committed",fc.n?fc.sum:"—",fc.n,N),
+    row("Fouls drawn",fd.n?fd.sum:"—",fd.n,N),
+    row("Yellow cards",yc.n?yc.sum:"—",yc.n,N),
+    row("Red cards",rc.n?rc.sum:"—",rc.n,N)
+  ]));
+
+  html.push(block("Per 90 minutes",[
+    row("Goals per 90",fmt(per90(g_.sum,g_.mins),2),g_.n,N),
+    row("Assists per 90",fmt(per90(a_.sum,a_.mins),2),a_.n,N),
+    row("Goal contributions per 90",fmt(per90(ga_,gaMins),2),g_.n,N),
+    row("Key passes per 90",fmt(per90(kp.sum,kp.mins),2),kp.n,N),
+    row("Tackles + interceptions per 90",fmt(per90(tk.sum+ic.sum,tk.mins),2),tk.n,N),
+    row("Passes attempted per 90",fmt(per90(patt,pc.mins),1),pc.n,N),
+    row("Average match rating",rated.length?
+      (rated.reduce((x,g)=>x+ +g.rating,0)/rated.length).toFixed(2):"—",rated.length,N)
+  ]));
+
+  body.innerHTML=html.join("");
+}
+
+function teamColor(t){
+  return t==="St Marys Gators"?"var(--gators)":TEAMS.includes(t)?"var(--cai)":"var(--other)";
+}
+function barChart(L){
+  const w=1000,h=118,gap=2,bw=Math.max(3,(w-gap*(L.length-1))/L.length);
+  let out='<svg class="chart" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none" aria-hidden="true">';
+  out+='<line x1="0" y1="4" x2="'+w+'" y2="4" stroke="var(--line)" stroke-width="2" stroke-dasharray="6 6"/>';
+  L.forEach((g,i)=>{
+    const share=g.len?Math.min(1,(g.min1+g.min2)/g.len):0;
+    const bh=Math.max(3,share*(h-8)),x=i*(bw+gap);
+    out+='<rect x="'+x.toFixed(1)+'" y="'+(h-bh).toFixed(1)+'" width="'+bw.toFixed(1)+
+         '" height="'+bh.toFixed(1)+'" rx="2" fill="'+teamColor(g.team)+'"/>';
+  });
+  return out+"</svg>";
+}
+function legend(L){
+  const ts=[...new Set(L.map(g=>g.team))];
+  return '<div class="lgd">'+ts.map(t=>'<span><i style="background:'+teamColor(t)+'"></i>'+shortName(t)+"</span>").join("")+
+    '<span>Dashed line = full match</span></div>';
+}
+$("#openDash").onclick=()=>{renderDash();show("dash")};
+
+/* ---------------- import from the spreadsheet ---------------- */
+function parseDate(v){
+  v=(v||"").trim();
+  let m=v.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  if(m){let y=+m[3];if(y<100)y+=2000;return y+"-"+pad2(+m[1])+"-"+pad2(+m[2])}
+  m=v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if(m)return m[1]+"-"+pad2(+m[2])+"-"+pad2(+m[3]);
+  return null;
+}
+function cellNum(v){
+  if(v==null)return null;
+  v=String(v).replace(/[%,\s]/g,"").trim();
+  if(v==="")return null;
+  const n=Number(v);
+  return isFinite(n)?n:null;
+}
+function splitLine(l){
+  if(l.indexOf("\t")>=0)return l.split("\t");
+  const out=[];let cur="",q=false;
+  for(let i=0;i<l.length;i++){const c=l[i];
+    if(c==='"'){ if(q&&l[i+1]==='"'){cur+='"';i++} else q=!q; }
+    else if(c===","&&!q){out.push(cur);cur=""}
+    else cur+=c;
+  }
+  out.push(cur);return out;
+}
+$("#openImport").onclick=()=>{$("#imp").value="";$("#impMsg").style.display="none";show("importScreen")};
+$("#doImport").onclick=()=>{
+  const raw=$("#imp").value.trim();
+  const msg=$("#impMsg");msg.style.display="block";
+  if(!raw){msg.textContent="Nothing pasted yet.";return}
+  let added=0,skipped=0,bad=0;
+  raw.split(/\r?\n/).forEach(line=>{
+    if(!line.trim())return;
+    const c=splitLine(line).map(x=>(x||"").trim());
+    const date=parseDate(c[1]), team=c[2], opp=c[3];
+    if(!date||!team||c.length<16){bad++;return}
+    if(DB.games.some(g=>g.date===date&&g.team===team&&g.opponent===opp)){skipped++;return}
+    const st=blankNull();
+    st.goals=cellNum(c[16]); st.assists=cellNum(c[17]); st.shots=cellNum(c[18]);
+    st.sot=cellNum(c[19]);   st.kp=cellNum(c[20]);
+    const att=cellNum(c[21]),comp=cellNum(c[22]);
+    st.pcomp=comp; st.pincomp=(att!=null&&comp!=null)?Math.max(0,att-comp):null;
+    st.tackles=cellNum(c[24]); st.intc=cellNum(c[25]);
+    st.dw=cellNum(c[26]); st.dl=cellNum(c[27]);
+    st.fc=cellNum(c[29]); st.fd=cellNum(c[30]);
+    st.yc=cellNum(c[31]); st.rc=cellNum(c[32]);
+    DB.games.push({
+      id:Date.now()+Math.floor(Math.random()*100000),
+      date,team,opponent:opp||"Opponent",ha:c[4]||"",comp:c[5]||"",
+      gf:cellNum(c[6])||0, ga:cellNum(c[7])||0,
+      len:cellNum(c[10])||0, min1:cellNum(c[11])||0, min2:cellNum(c[12])||0,
+      started:(c[15]||"").toUpperCase()==="N"?"N":"Y",
+      rating:cellNum(c[33]), notes:c[34]||"", stats:st, imported:true
+    });
+    added++;
+  });
+  save();renderHome();
+  msg.innerHTML="<b>"+added+" game"+(added===1?"":"s")+" imported.</b>"+
+    (skipped?" "+skipped+" already here, skipped.":"")+
+    (bad?" "+bad+" line"+(bad===1?"":"s")+" couldn't be read — check you copied from column A.":"");
+  if(added){dashTeam="All";renderDash();setTimeout(()=>show("dash"),700);toast("Imported "+added+" games")}
+};
+
 /* ---------------- home ---------------- */
-let tab=2;
 function accentFor(team){
   document.documentElement.style.setProperty("--accent",
-    team==="St Marys Gators"?"var(--gators)":"var(--cai)");
+    team==="St Marys Gators"?"var(--gators)":team&&!TEAMS.includes(team)?"var(--other)":"var(--cai)");
 }
 function renderHome(){
-  accentFor(tab===1?"St Marys Gators":"Academia CAI");
-  const tabs=$("#teamTabs");tabs.innerHTML="";
-  ["Academia CAI","St Marys Gators","Both"].forEach((n,i)=>{
-    const b=document.createElement("button");b.textContent=n==="Academia CAI"?"CAI":n;
-    if(i===tab)b.classList.add("on");
-    b.onclick=()=>{tab=i;renderHome()};tabs.appendChild(b);
-  });
-  const list=tab===2?DB.games:DB.games.filter(g=>g.team===TEAMS[tab]);
-  const T=$("#totals");
-  if(!list.length){
-    T.innerHTML='<div class="empty">Nothing logged for this team yet.</div>';
-  }else{
-    const sum=k=>list.reduce((a,g)=>a+(g.stats[k]||0),0);
-    const m=list.reduce((a,g)=>a+g.min1+g.min2,0);
-    const att=sum("pcomp")+sum("pincomp");
-    const w=list.filter(g=>g.gf>g.ga).length,d=list.filter(g=>g.gf===g.ga).length;
-    const per=v=>m?(v/(m/90)).toFixed(2):"—";
-    T.innerHTML=[
-      ["Games",list.length+"  ("+w+"W "+d+"D "+(list.length-w-d)+"L)"],
-      ["Minutes played",m],
-      ["Goals / assists",sum("goals")+" / "+sum("assists")],
-      ["Contributions per 90",per(sum("goals")+sum("assists"))],
-      ["Pass completion",att?Math.round(100*sum("pcomp")/att)+"%":"—"],
-      ["Tackles + int. per 90",per(sum("tackles")+sum("intc"))],
-      ["Average rating",(list.reduce((a,g)=>a+(+g.rating||0),0)/list.length).toFixed(1)]
-    ].map(r=>'<div class="totrow"><span>'+r[0]+"</span><b>"+r[1]+"</b></div>").join("");
-  }
-
+  accentFor("Academia CAI");
   const gl=$("#gameList");gl.innerHTML="";
   const games=sorted().reverse();
   if(!games.length){
@@ -682,9 +963,9 @@ function renderHome(){
     const res=g.gf>g.ga?"W":g.gf===g.ga?"D":"L";
     const b=document.createElement("button");b.className="gitem";
     b.innerHTML='<span class="res '+res+'">'+res+'</span>'+
-      '<span class="m"><b>'+(g.team==="Academia CAI"?"CAI":"Gators")+" "+g.gf+" – "+g.ga+" "+
+      '<span class="m"><b>'+shortName(g.team)+" "+g.gf+" – "+g.ga+" "+
       g.opponent.replace(/[<>&]/g,"")+'</b><span>'+niceDate(g.date)+" · "+g.ha+'</span></span>'+
-      '<span class="r">'+(g.min1+g.min2)+"'<em>"+g.stats.goals+"G "+g.stats.assists+"A</em></span>";
+      '<span class="r">'+(g.min1+g.min2)+"'<em>"+dsh(g.stats.goals)+"G "+dsh(g.stats.assists)+"A</em></span>";
     b.onclick=()=>openDetail(i);
     gl.appendChild(b);
   });
@@ -693,7 +974,7 @@ function renderHome(){
   if(DB.live){
     const b=document.createElement("button");
     b.className="cta sub";b.style.marginTop="10px";
-    b.textContent="Resume "+(DB.live.team==="Academia CAI"?"CAI":"Gators")+" vs "+DB.live.opponent;
+    b.textContent="Resume "+shortName(DB.live.team)+" vs "+DB.live.opponent;
     b.onclick=()=>{G=DB.live;openLive()};
     rw.appendChild(b);
   }
