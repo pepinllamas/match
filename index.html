@@ -188,9 +188,7 @@ textarea{min-height:74px;resize:none}
     <button class="cta" id="newGame">New game</button>
     <div id="resumeWrap"></div>
     <button class="cta sub" id="openDash" style="margin-top:10px">Season dashboard</button>
-
-    <div class="eyebrow" style="margin:24px 0 4px">Games logged</div>
-    <div id="gameList"></div>
+    <button class="cta sub" id="openGames" style="margin-top:10px">All games<span id="gameCount"></span></button>
   </div>
 </section>
 
@@ -280,7 +278,7 @@ textarea{min-height:74px;resize:none}
 
 <!-- ================= DETAIL / EXPORT ================= -->
 <section id="detail" class="screen">
-  <div class="bar"><button class="ghost" data-back="home">Done</button><div class="sp"></div>
+  <div class="bar"><button class="ghost" data-back="games">Back</button><div class="sp"></div>
     <button class="ghost" id="delGame" style="border-color:#7A2E31;color:#F19A9C">Delete</button></div>
   <div class="scroll">
     <div class="card"><h2 id="dHead">Game</h2><div id="dRecap"></div></div>
@@ -312,6 +310,15 @@ textarea{min-height:74px;resize:none}
     <div class="mono" id="allPreview"></div>
     <button class="cta sub" id="dlCsvAll" style="margin-top:12px">Download all games as CSV</button>
     <div class="warn" id="storeWarn" style="display:none"></div>
+  </div>
+</section>
+
+<!-- ================= GAMES ================= -->
+<section id="games" class="screen">
+  <div class="bar"><button class="ghost" data-back="home">Done</button><div class="sp"></div><h1>All games</h1></div>
+  <div class="scroll">
+    <div class="chips" id="gameChips" style="margin-bottom:8px"></div>
+    <div id="gameList"></div>
   </div>
 </section>
 
@@ -485,9 +492,16 @@ function openSetup(){
   $("#lenCustomWrap").style.display="none";
   show("setup");
 }
+let armNew=null;
 $("#newGame").onclick=()=>{
-  if(DB.live){ if(!confirm("A game is already in progress. Starting a new one will discard it.")) return; }
-  openSetup();
+  const b=$("#newGame");
+  if(DB.live&&!armNew){
+    b.textContent="Discard the game in progress?";
+    armNew=setTimeout(()=>{armNew=null;b.textContent="New game"},4000);
+    return;
+  }
+  clearTimeout(armNew);armNew=null;$("#newGame").textContent="New game";
+  DB.live=null;save();openSetup();
 };
 $("#startGame").onclick=()=>{
   if($("#teamOtherWrap").style.display==="block"){
@@ -617,7 +631,7 @@ $("#saveGame").onclick=()=>{
   G.rating=G.rating||7;
   delete G.undo;delete G.clockAt;delete G.onAt;
   DB.games.push(G);DB.live=null;G=null;save();
-  renderHome();show("home");toast("Game saved");
+  renderHome();renderGames();show("home");toast("Game saved");
 };
 
 /* ---------------- spreadsheet row ---------------- */
@@ -688,7 +702,7 @@ function openDetail(i){
     ["Rating",dsh(g.rating)]
   ].map(r=>'<div class="totrow"><span>'+r[0]+"</span><b>"+r[1]+"</b></div>").join("");
   $("#fRow").value=5+i;
-  refreshRow();show("detail");
+  disarmDel();refreshRow();show("detail");
 }
 function refreshRow(){
   const r=Math.max(5,+$("#fRow").value||5);
@@ -698,10 +712,24 @@ $("#fRow").oninput=refreshRow;
 $("#copyRow").onclick=()=>copyText(rowFor(sorted()[openIdx],Math.max(5,+$("#fRow").value||5),openIdx+1));
 $("#dlCsv").onclick=()=>{const g=sorted()[openIdx];
   download("game-"+g.date+".csv",csv(rowFor(g,5,openIdx+1)))};
+let armDel=null;
+function disarmDel(){
+  clearTimeout(armDel);armDel=null;
+  const b=$("#delGame");b.textContent="Delete";
+  b.style.background="";b.style.color="#F19A9C";b.style.borderColor="#7A2E31";
+}
 $("#delGame").onclick=()=>{
-  if(!confirm("Delete this game? It can't be brought back."))return;
+  const b=$("#delGame");
+  if(!armDel){
+    b.textContent="Tap again to delete";
+    b.style.background="var(--flag)";b.style.color="#fff";b.style.borderColor="var(--flag)";
+    armDel=setTimeout(disarmDel,4000);
+    return;
+  }
+  disarmDel();
   const g=sorted()[openIdx];
-  DB.games=DB.games.filter(x=>x.id!==g.id);save();renderHome();show("home");toast("Game deleted");
+  DB.games=DB.games.filter(x=>x.id!==g.id);
+  save();renderHome();renderGames();show("games");toast("Game deleted");
 };
 
 /* ---------------- export all ---------------- */
@@ -939,7 +967,7 @@ $("#doImport").onclick=()=>{
     });
     added++;
   });
-  save();renderHome();
+  save();renderHome();renderGames();
   msg.innerHTML="<b>"+added+" game"+(added===1?"":"s")+" imported.</b>"+
     (skipped?" "+skipped+" already here, skipped.":"")+
     (bad?" "+bad+" line"+(bad===1?"":"s")+" couldn't be read — check you copied from column A.":"");
@@ -951,25 +979,11 @@ function accentFor(team){
   document.documentElement.style.setProperty("--accent",
     team==="St Marys Gators"?"var(--gators)":team&&!TEAMS.includes(team)?"var(--other)":"var(--cai)");
 }
+let gameFilter="All";
 function renderHome(){
   accentFor("Academia CAI");
-  const gl=$("#gameList");gl.innerHTML="";
-  const games=sorted().reverse();
-  if(!games.length){
-    gl.innerHTML='<div class="empty">No games yet.<br>Tap <b>New game</b> just before kickoff.</div>';
-  }
-  games.forEach(g=>{
-    const i=sorted().findIndex(x=>x.id===g.id);
-    const res=g.gf>g.ga?"W":g.gf===g.ga?"D":"L";
-    const b=document.createElement("button");b.className="gitem";
-    b.innerHTML='<span class="res '+res+'">'+res+'</span>'+
-      '<span class="m"><b>'+shortName(g.team)+" "+g.gf+" – "+g.ga+" "+
-      g.opponent.replace(/[<>&]/g,"")+'</b><span>'+niceDate(g.date)+" · "+g.ha+'</span></span>'+
-      '<span class="r">'+(g.min1+g.min2)+"'<em>"+dsh(g.stats.goals)+"G "+dsh(g.stats.assists)+"A</em></span>";
-    b.onclick=()=>openDetail(i);
-    gl.appendChild(b);
-  });
-
+  const n=DB.games.length;
+  $("#gameCount").textContent=n?"  ·  "+n:"";
   const rw=$("#resumeWrap");rw.innerHTML="";
   if(DB.live){
     const b=document.createElement("button");
@@ -979,9 +993,48 @@ function renderHome(){
     rw.appendChild(b);
   }
 }
+
+function renderGames(){
+  const chips=$("#gameChips");chips.innerHTML="";
+  const names=["All",...knownTeams().filter(t=>DB.games.some(g=>g.team===t))];
+  if(!names.includes(gameFilter))gameFilter="All";
+  names.forEach(t=>{
+    const b=document.createElement("button");b.textContent=t==="All"?"All teams":shortName(t);
+    if(t===gameFilter)b.classList.add("on");
+    b.onclick=()=>{gameFilter=t;renderGames()};chips.appendChild(b);
+  });
+  chips.style.display=names.length>2?"flex":"none";
+
+  const gl=$("#gameList");gl.innerHTML="";
+  const all=sorted();
+  const games=all.slice().reverse().filter(g=>gameFilter==="All"||g.team===gameFilter);
+  if(!games.length){
+    gl.innerHTML='<div class="empty">'+(DB.games.length
+      ? "No games for this team yet."
+      : "No games yet.<br>Tap <b>New game</b> just before kickoff, or import what's already in the spreadsheet.")+"</div>";
+    return;
+  }
+  games.forEach(g=>{
+    const i=all.findIndex(x=>x.id===g.id);
+    const res=g.gf>g.ga?"W":g.gf===g.ga?"D":"L";
+    const b=document.createElement("button");b.className="gitem";
+    b.innerHTML='<span class="res '+res+'">'+res+'</span>'+
+      '<span class="m"><b>'+shortName(g.team)+" "+g.gf+" – "+g.ga+" "+
+      g.opponent.replace(/[<>&]/g,"")+'</b><span>'+niceDate(g.date)+" · "+g.ha+'</span></span>'+
+      '<span class="r">'+(g.min1+g.min2)+"'<em>"+dsh(g.stats.goals)+"G "+dsh(g.stats.assists)+"A</em></span>";
+    b.onclick=()=>openDetail(i);
+    gl.appendChild(b);
+  });
+}
+$("#openGames").onclick=()=>{renderGames();show("games")};
+
 document.querySelectorAll("[data-back]").forEach(b=>b.onclick=()=>{
   const t=b.dataset.back;
-  if(t==="home"){renderHome();show("home")}else if(t==="live"&&G){show("live")}else show("home");
+  disarmDel();
+  if(t==="games"){renderGames();show("games")}
+  else if(t==="dash"){renderDash();show("dash")}
+  else if(t==="live"&&G){show("live")}
+  else {renderHome();show("home")}
 });
 document.querySelectorAll("[data-score]").forEach(b=>b.onclick=()=>{
   const k=b.dataset.score;G[k]=Math.max(0,G[k]+ +b.dataset.d);save();paintLive();
